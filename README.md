@@ -31,21 +31,51 @@ podman and podman-compose.  I am using podman-compose version 1.5.0 and podman v
 
       mkdir -p $HOME/ovos/volumes/{config,data,nltk_data,state,tmp}
       mkdir $HOME/ovos/volumes/config/mycroft
-      cp mycroft.conf $HOME/ovos/volumes/config/mycroft
 
 - create config file
+
+      cp mycroft.conf $HOME/ovos/volumes/config/mycroft
+
+  For more options / explanations, see [ovos-config](https://github.com/OpenVoiceOS/ovos-config).
+
 - test mapping of user ID into containers
+
+    % podman run --userns keep-id:uid=1000,gid=1000 -d -v ../../config/mycroft:/home/ovos/.config/mycroft --name messagebus jarbasai/ovos-messagebus
+    % podman exec -it messagebus /bin/bash
+    ovos@messagebus:~$ id
+    uid=1000(ovos) gid=1000(ovos) groups=1000(ovos)
+    ovos@messagebus:~$ ls -l
+    total 4
+    -rwxr-xr-x 1 ovos ovos 1059 Dec 31 04:09 ovos-hc
+    ovos@messagebus:~$ ls -l .config/
+    total 4
+    drwxr-xr-x 2 ovos ovos 4096 Jan  2 16:16 mycroft
+
+  The user/group of the files inside .config should both be "ovos".
+
 
 ## Run instructions
 
-- individual container: podman run
-- whole collection: run podman-compose up
+- individual container:
+
+      podman run (as above)
+
+- whole collection:
+
+      cd core
+      podman network create ovos-net # needed only once
+                                     # used in the compose file
+      podman-compose up
+
+  I am starting with testing the core services first, and will
+  add more containerized services once those are working.
+
 
 ## Development instructions
 
-- Modify config file `~>` restart containers.
+- Modify config file ~> restart containers.
 
-- Modify component packages `~>` rebuild corresponding image `~>` restart container.
+- Modify component packages ~> rebuild corresponding image ~> restart container.
 
-- Create integration tests `~>` run with ???
+- Create integration tests ~> run with ???
 

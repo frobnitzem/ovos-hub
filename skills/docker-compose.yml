@@ -1,8 +1,6 @@
-
+---
 x-podman: &podman
-  userns_mode: keep-id
-  security_opt:
-    - "label=disable"
+  in_pod: false
 
 x-logging: &default-logging
   driver: json-file
@@ -24,22 +22,21 @@ x-skill-resource-limits: &skill-resource-limits
         memory: 64M
 
 x-skill-base: &skill-base
-  <<: [*podman, *skill-resource-limits]
+  <<: [*skill-resource-limits]
   restart: unless-stopped
   logging: *default-logging
-  #pull_policy: ${PULL_POLICY:-always}
-  user: ${MAIN_UID:-1000}:${MAIN_GID:-1000}
+  userns_mode: "keep-id:uid=1000,gid=1000"
   environment:
     <<: *common-environment
   network_mode: host
   volumes:
-    - ${CONFIG_BASE_DIR}/mycroft:/home/ovos/.config/mycroft
-    - ${DATA_BASE_DIR}/mycroft:/home/ovos/.local/share/mycroft
-    - ${CACHE_BASE_DIR}/mycroft:/home/ovos/.cache/mycroft
-    - ${STATE_BASE_DIR}/mycroft:/home/ovos/.local/state/mycroft
-    - ${TMP_FOLDER}:/tmp/mycroft
-    - ${NLTK_DIR}:/home/ovos/nltk_data
-    - ${CACHE_BASE_DIR}/ovos_gui:/home/ovos/.cache/ovos_gui
+    - ${BASE_DIR}/config/mycroft:/home/ovos/.config/mycroft
+    - ${BASE_DIR}/data/mycroft:/home/ovos/.local/share/mycroft
+    - ${BASE_DIR}/cache/mycroft:/home/ovos/.cache/mycroft
+    - ${BASE_DIR}/cache/ovos_gui:/home/ovos/.cache/ovos_gui
+    - ${BASE_DIR}/state/mycroft:/home/ovos/.local/state/mycroft
+    - ${BASE_DIR}/tmp:/tmp/mycroft
+    - ${BASE_DIR}/nltk_data:/home/ovos/nltk_data
 
 services:
   ovos_skill_wikipedia:
@@ -203,3 +200,7 @@ services:
     container_name: ovos_skill_wikihow
     hostname: ovos_skill_wikihow
     image: jarbasai/ovos-skill-wikihow:latest
+
+networks:
+  ovos-net:
+    external: true

@@ -1,6 +1,9 @@
-FROM jarbasai/ovos-stt-server-nemo-rocm:latest
+FROM jarbasai/ovos-base:latest
+USER root
 
-COPY gpu.conf /etc/mycroft/mycroft.conf
+RUN uv pip install aiohttp SpeechRecognition ovos-stt-http-server
+
+#COPY gpu.conf /etc/mycroft/mycroft.conf
 
 ENTRYPOINT ovos-stt-server --engine ovos-stt-plugin-nemo
 

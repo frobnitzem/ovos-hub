@@ -1,8 +1,5 @@
-
 x-podman: &podman
-  userns_mode: keep-id
-  security_opt:
-    - "label=disable"
+  in_pod: false
 
 x-logging: &default-logging
   driver: json-file
@@ -19,32 +16,30 @@ x-tx-base: &tx-base
   <<: *podman
   restart: unless-stopped
   logging: *default-logging
-  pull_policy: ${PULL_POLICY:-always}
-  user: ${MAIN_UID:-1000}:${MAIN_GID:-1000}
+  userns_mode: "keep-id:uid=1000,gid=1000"
   environment:
     <<: *common-environment
   network_mode: host
   # GPU support
-  stdin_open: true
-  tty: true
-  cap_add:
-    - SYS_PTRACE
-  security_opt:
-    - seccomp=unconfined
-  group_add:
-    - video
-  ipc: host
-  devices:
-    - /dev/kfd
-    - /dev/dri
+ #stdin_open: true
+ #tty: true
+ #cap_add:
+ #  - SYS_PTRACE
+ #security_opt:
+ #  - seccomp=unconfined
+ #group_add:
+ #  - video
+ #ipc: host
+ #devices:
+ #  - /dev/kfd
+ #  - /dev/dri
   # volumes
   volumes:
-    - ${CONFIG_BASE_DIR}/mycroft:/home/ovos/.config/mycroft
-    - ${DATA_BASE_DIR}/mycroft:/home/ovos/.local/share/mycroft
-    - ${CACHE_BASE_DIR}/mycroft:/home/ovos/.cache/mycroft
-    - ${STATE_BASE_DIR}/mycroft:/home/ovos/.local/state/mycroft
-    - ${TMP_FOLDER}:/tmp/mycroft
-
+    - ${BASE_DIR}/config/mycroft:/home/ovos/.config/mycroft
+    - ${BASE_DIR}/data/mycroft:/home/ovos/.local/share/mycroft
+    - ${BASE_DIR}/cache/mycroft:/home/ovos/.cache/mycroft
+    - ${BASE_DIR}/state/mycroft:/home/ovos/.local/state/mycroft
+    - ${BASE_DIR}/tmp:/tmp/mycroft
 
 
 services:
@@ -69,3 +64,7 @@ services:
     image: docker.io/smartgic/ovos-tx-server-google:alpha
     ports:
       - "9687:9686"
+
+networks:
+  ovos-net:
+    external: true

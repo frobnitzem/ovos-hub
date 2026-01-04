@@ -1,8 +1,14 @@
 ---
-#x-podman: &podman
-#  userns_mode: keep-id
-#  security_opt:
-#    - "label=disable"
+x-podman:
+  in_pod: false
+#  #userns_mode: "keep-id:uid=1000,gid=1000" # docker method
+#  in_pod: true # apply this setting at the pod level
+#               # Note that in podman, all services in this file are started
+#               # in a single "pod" (like a single host).
+#  pod_args:
+#    - "--userns=keep-id:uid=1000,gid=1000"
+#    - "--network=ovos-net"         # Attach Pod to the shared network
+#    - "--hostname=ovos-core"       # This DNS name is used by other pods
 
 x-logging: &default-logging
   driver: json-file
@@ -36,21 +42,21 @@ x-volumes: &volumes
     - ${BASE_DIR}/tmp:/tmp/mycroft
     # audio
     - ~/.config/pulse/cookie:/home/ovos/.config/pulse/cookie:ro
-    - ${XDG_RUNTIME_DIR}/pipewire-0:${XDG_RUNTIME_DIR}/pipewire-0:ro
+   #- ${XDG_RUNTIME_DIR}/pipewire-0:${XDG_RUNTIME_DIR}/pipewire-0:ro
     - ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:ro
    #- ${XDG_RUNTIME_DIR}/pulse/native:${XDG_RUNTIME_DIR}/pulse/native:ro
 
 
 x-base: &base
-  #<<: [*podman, *volumes]
   <<: [*volumes]
   restart: unless-stopped
   logging: *default-logging
   pull_policy: ${PULL_POLICY:-missing}
-  user: ${MAIN_UID:-1000}:${MAIN_GID:-1000}
-  network_mode: host # TODO: remove this and have pods talk to http://ovos-messagebus:8181
   environment:
     <<: *common-environment
+  userns_mode: "keep-id:uid=1000,gid=1000"
+  networks:
+    - ovos-net
 
 x-audio: &audio
   <<: *base
@@ -67,24 +73,27 @@ services:
   ovos_messagebus:
     <<: [*base, *resource-limits]
     container_name: ovos_messagebus
-    hostname: ovos_messagebus
     image: jarbasai/ovos-messagebus:latest
     environment:
-      - BUS_HOST=127.0.0.1 # only useful for network_mode=host
+      OVOS_WEBSOCKET_HOST: "0.0.0.0"
+        HEALTHCHECK --interval=60s --timeout=10s --retries=3 --start-period=60s \
+    healthcheck:
+      test: ["CMD-SHELL", "curl --header 'Connection: Upgrade' --header 'Upgrade: Websocket' http://ovos_messagebus:8181/core || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   ovos_gui_websocket:
     <<: [*base, *resource-limits]
     container_name: ovos_gui_websocket
-    hostname: ovos_gui_websocket
     image: jarbasai/ovos-gui-websocket:latest
     depends_on:
-      ovos_messagebus:
-        condition: service_started
+      - ovos_messagebus
 
   ovos_phal:
     <<: [*audio, *resource-limits]
     container_name: ovos_phal
-    hostname: ovos_phal
     image: jarbasai/ovos-phal:latest
     # Only use privileged if absolutely necessary for hardware access
     # TODO - adjust depending on installed PHAL plugins
@@ -94,37 +103,46 @@ services:
     #  - SYS_ADMIN
     #  - DAC_OVERRIDE
     depends_on:
-      ovos_messagebus:
-        condition: service_started
+      - ovos_messagebus
 
   ovos_listener:
     <<: [*audio, *resource-limits]
     container_name: ovos_listener
-    hostname: ovos_listener
     # pick one
     image: jarbasai/ovos-dinkum-listener:latest
     #image: jarbasai/ovos-simple-listener:latest
     #image: jarbasai/ovos-classic-listener:latest
     depends_on:
-      ovos_messagebus:
-        condition: service_started
+      - ovos_messagebus
 
   ovos_audio:
     <<: [*audio, *resource-limits]
     container_name: ovos_audio
-    hostname: ovos_audio
     image: jarbasai/ovos-audio:latest
     depends_on:
-      ovos_messagebus:
-        condition: service_started
+      - ovos_messagebus
 
   ovos_core:
     <<: [*audio, *resource-limits]
     container_name: ovos_core
-    hostname: ovos_core
     image: jarbasai/ovos-core:latest
     volumes:
+      # ovos
+      - ${BASE_DIR}/config/mycroft:/home/ovos/.config/mycroft
+      - ${BASE_DIR}/data/mycroft:/home/ovos/.local/share/mycroft
+      - ${BASE_DIR}/cache/ovos_gui:/home/ovos/.cache/ovos_gui
+      - ${BASE_DIR}/cache/mycroft:/home/ovos/.cache/mycroft
+      - ${BASE_DIR}/state/mycroft:/home/ovos/.local/state/mycroft
+      - ${BASE_DIR}/tmp:/tmp/mycroft
+      # audio
+      - ~/.config/pulse/cookie:/home/ovos/.config/pulse/cookie:ro
+      - ${XDG_RUNTIME_DIR}/pipewire-0:${XDG_RUNTIME_DIR}/pipewire-0:ro
+      - ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:ro
+      # nltk
       - ${BASE_DIR}/nltk_data:/home/ovos/nltk_data
     depends_on:
-      ovos_messagebus:
-        condition: service_started
+      - ovos_messagebus
+
+networks:
+  ovos-net:
+    external: true

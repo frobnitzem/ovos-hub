@@ -12,20 +12,24 @@ gnome/wayland desktop.
 
 ## Pre-requisites
 
-podman and podman-compose.  I am using podman-compose version 1.5.0 and podman version 5.7.1.  Podman-compose is a python package that can be pip-installed.
+podman, podman-compose, GNU make.
+
+I am using podman-compose version 1.5.0 and podman version 5.7.1.
+Podman-compose is a python package that can be pip-installed.
 
 ## Setup instructions
 
-- setup env vars
-
-      id # get your user and group ID-s to put in .env, below
-      vi .env
-      # Note: set BASE_DIR to $HOME/ovos/volumes
-      # if following these instructions
-
 - build container images
 
-      bash build.sh
+      make base # build a few images first to check that everything is OK
+      make # build all images
+
+- setup env vars
+
+      cp .env.example .env
+      vi .env
+      # Note: set BASE_DIR to $HOME/ovos/volumes
+      # if following the layout below.
 
 - make config/data directories
 
@@ -36,7 +40,7 @@ podman and podman-compose.  I am using podman-compose version 1.5.0 and podman v
 
       cp mycroft.conf $HOME/ovos/volumes/config/mycroft
 
-  For more options / explanations, see [ovos-config](https://github.com/OpenVoiceOS/ovos-config).
+  For more options / explanations, see [ovos-config](https://github.com/OpenVoiceOS/ovos-config). Additional configuration options are documented within each separate ovos package where they are used.  Note that hivemind components plug into ovos-core, but use a separate configuration file.
 
 - test mapping of user ID into containers
 
@@ -62,20 +66,43 @@ podman and podman-compose.  I am using podman-compose version 1.5.0 and podman v
 
 - whole collection:
 
-      cd core
-      podman network create ovos-net # needed only once
-                                     # used in the compose file
-      podman-compose up
+      podman network create ovos-net # needs to be run only once
+      podman-compose -f core/docker-compose.yml up
+      podman-compose -f stt/docker-compose.yml up
+      podman-compose -f tts/docker-compose.yml up
+      podman-compose -f skills/docker-compose.yml up
+      ...
 
   I am starting with testing the core services first, and will
   add more containerized services once those are working.
 
+Note that this version does not use `network_mode: host`, but instead
+attaches all the ovos containers to an isolated "ovos-net" network.
+It also runs every container in its own pod, and
+maps the container ovos user to your user on the host (so it can access audio).
+The relevant lines from docker-compose.yml are:
+
+    x-podman: # global config
+      in_pod: false
+
+    per-service config:
+      userns_mode: "keep-id:uid=1000,gid=1000"
+      networks:
+        - ovos-net
+
+    networks: # global config
+      ovos-net:
+        external: true
+
 
 ## Development instructions
 
-- Modify config file ~> restart containers.
+- Modify config file ~> containers automatically pick up this change
 
-- Modify component packages ~> rebuild corresponding image ~> restart container.
+- Modify component packages ~> rebuild corresponding image ~> restart containers
+
+      podman-compose restart [-h] [-t TIMEOUT] [services ...]
 
 - Create integration tests ~> run with ???
+
 

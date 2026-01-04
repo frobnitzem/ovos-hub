@@ -1,8 +1,6 @@
-
+---
 x-podman: &podman
-  userns_mode: keep-id
-  security_opt:
-    - "label=disable"
+  in_pod: false
 
 x-logging: &default-logging
   driver: json-file
@@ -20,17 +18,16 @@ x-tts-base: &tts-base
   <<: *podman
   restart: unless-stopped
   logging: *default-logging
-  pull_policy: ${PULL_POLICY:-always}
-  user: ${MAIN_UID:-1000}:${MAIN_GID:-1000}
+  userns_mode: "keep-id:uid=1000,gid=1000"
   tty: true
   environment:
     <<: *common-environment
   volumes:
-    - ${CONFIG_BASE_DIR}/mycroft:/home/ovos/.config/mycroft
-    - ${DATA_BASE_DIR}/mycroft:/home/ovos/.local/share/mycroft
-    - ${CACHE_BASE_DIR}/mycroft:/home/ovos/.cache/mycroft
-    - ${STATE_BASE_DIR}/mycroft:/home/ovos/.local/state/mycroft
-    - ${TMP_FOLDER}:/tmp/mycroft
+    - ${BASE_DIR}/config/mycroft:/home/ovos/.config/mycroft
+    - ${BASE_DIR}/data/mycroft:/home/ovos/.local/share/mycroft
+    - ${BASE_DIR}/cache/mycroft:/home/ovos/.cache/mycroft
+    - ${BASE_DIR}/state/mycroft:/home/ovos/.local/state/mycroft
+    - ${BASE_DIR}/tmp:/tmp/mycroft
 
 
 services:
@@ -46,7 +43,12 @@ services:
     ports:
       - "8089:9666"
     volumes:
-      - ${DATA_BASE_DIR}/piper_tts:/home/ovos/.local/share/piper_tts
+      - ${BASE_DIR}/config/mycroft:/home/ovos/.config/mycroft
+      - ${BASE_DIR}/data/mycroft:/home/ovos/.local/share/mycroft
+      - ${BASE_DIR}/cache/mycroft:/home/ovos/.cache/mycroft
+      - ${BASE_DIR}/state/mycroft:/home/ovos/.local/state/mycroft
+      - ${BASE_DIR}/tmp:/tmp/mycroft
+      - ${BASE_DIR}/data/piper_tts:/home/ovos/.local/share/piper_tts
 
   ovos_tts_mimic3:
     build:
@@ -120,5 +122,13 @@ services:
     ports:
       - "8096:9666"
     volumes:
-      - ${DATA_BASE_DIR}/nos_tts_models:/home/ovos/.local/share/nos_tts_models
+      - ${BASE_DIR}/config/mycroft:/home/ovos/.config/mycroft
+      - ${BASE_DIR}/data/mycroft:/home/ovos/.local/share/mycroft
+      - ${BASE_DIR}/cache/mycroft:/home/ovos/.cache/mycroft
+      - ${BASE_DIR}/state/mycroft:/home/ovos/.local/state/mycroft
+      - ${BASE_DIR}/tmp:/tmp/mycroft
+      - ${BASE_DIR}/data/nos_tts_models:/home/ovos/.local/share/nos_tts_models
 
+networks:
+  ovos-net:
+    external: true

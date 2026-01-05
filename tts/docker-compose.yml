@@ -32,16 +32,10 @@ x-tts-base: &tts-base
 
 services:
   ovos_tts_piper:
-    build:
-      context: ./piper
-      dockerfile: Dockerfile
     <<: *tts-base
-    container_name: ovos_tts_piper
     hostname: ovos_tts_piper
     restart: unless-stopped
-    image: jarbasai/ovos-tts-server-piper:latest
-    ports:
-      - "8089:9666"
+    image: jarbasai/ovos-tts-server-piper:0.1.0
     volumes:
       - ${BASE_DIR}/config/mycroft:/home/ovos/.config/mycroft
       - ${BASE_DIR}/data/mycroft:/home/ovos/.local/share/mycroft
@@ -50,77 +44,54 @@ services:
       - ${BASE_DIR}/tmp:/tmp/mycroft
       - ${BASE_DIR}/data/piper_tts:/home/ovos/.local/share/piper_tts
 
+other:
   ovos_tts_mimic3:
-    build:
-      context: ./mimic3
-      dockerfile: Dockerfile
     <<: *tts-base
-    container_name: ovos_tts_mimic3
     hostname: ovos_tts_mimic3
     restart: unless-stopped
     image: jarbasai/ovos-tts-server-mimic3:latest
     ports:
-      - "8090:9666"
+      - "80:9666"
 
   ovos_tts_mimic:
-    build:
-      context: ./mimic
-      dockerfile: Dockerfile
     <<: *tts-base
-    container_name: ovos_tts_mimic
     hostname: ovos_tts_mimic
     restart: unless-stopped
     image: jarbasai/ovos-tts-server-mimic:latest
     ports:
-      - "8091:9666"
+      - "80:9666"
 
   ovos_tts_google_tx:
-    build:
-      context: ./google-tx
-      dockerfile: Dockerfile
     <<: *tts-base
-    container_name: ovos_tts_google_tx
     hostname: ovos_tts_google_tx
     restart: unless-stopped
     image: jarbasai/ovos-tts-server-google-tx:latest
     ports:
-      - "8092:9666"
+      - "80:9666"
 
   ovos_tts_sam:
-    build:
-      context: ./sam
-      dockerfile: Dockerfile
     <<: *tts-base
-    container_name: ovos_tts_sam
     hostname: ovos_tts_sam
     restart: unless-stopped
     image: jarbasai/ovos-tts-server-sam:latest
     ports:
-      - "8094:9666"
+      - "80:9666"
 
   ovos_tts_matxa:
-    build:
-      context: ./matxa
-      dockerfile: Dockerfile
     <<: *tts-base
-    container_name: ovos_tts_matxa
     hostname: ovos_tts_matxa
     restart: unless-stopped
     image: jarbasai/ovos-tts-server-matxa:latest
     ports:
-      - "8095:9666"
+      - "80:9666"
 
   ovos_tts_nos:
-    build:
-      context: ./nos
-      dockerfile: Dockerfile
     <<: *tts-base
-    container_name: ovos_tts_nos
     hostname: ovos_tts_nos
     restart: unless-stopped
     image: jarbasai/ovos-tts-server-nos:latest
     ports:
-      - "8096:9666"
+      - "80:9666"
     volumes:
       - ${BASE_DIR}/config/mycroft:/home/ovos/.config/mycroft
       - ${BASE_DIR}/data/mycroft:/home/ovos/.local/share/mycroft

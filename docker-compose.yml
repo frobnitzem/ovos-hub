@@ -34,18 +34,18 @@ x-resource-limits: &resource-limits
 x-volumes: &volumes
   volumes:
     # ovos
-    - ${BASE_DIR}/config/mycroft:/home/ovos/.config/mycroft
-    - ${BASE_DIR}/data/mycroft:/home/ovos/.local/share/mycroft
-    - ${BASE_DIR}/cache/ovos_gui:/home/ovos/.cache/ovos_gui
-    - ${BASE_DIR}/cache/mycroft:/home/ovos/.cache/mycroft
-    - ${BASE_DIR}/state/mycroft:/home/ovos/.local/state/mycroft
+    - ${BASE_DIR}/config:/home/ovos/.config
+    - ${BASE_DIR}/data:/home/ovos/.local/share
+    - ${BASE_DIR}/cache:/home/ovos/.cache
+    - ${BASE_DIR}/state:/home/ovos/.local/state
     - ${BASE_DIR}/tmp:/tmp/mycroft
     # audio
     - ~/.config/pulse/cookie:/home/ovos/.config/pulse/cookie:ro
    #- ${XDG_RUNTIME_DIR}/pipewire-0:${XDG_RUNTIME_DIR}/pipewire-0:ro
     - ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:ro
    #- ${XDG_RUNTIME_DIR}/pulse/native:${XDG_RUNTIME_DIR}/pulse/native:ro
-
+    # nltk
+    - ${BASE_DIR}/nltk_data:/home/ovos/nltk_data
 
 x-base: &base
   <<: [*volumes]
@@ -73,7 +73,7 @@ services:
   ovos_messagebus:
     <<: [*base, *resource-limits]
     container_name: ovos_messagebus
-    image: jarbasai/ovos-messagebus:latest
+    image: jarbasai/ovos-messagebus:$CORE_VERSION
     environment:
       OVOS_WEBSOCKET_HOST: "0.0.0.0"
     healthcheck:
@@ -86,14 +86,20 @@ services:
   ovos_gui_websocket:
     <<: [*base, *resource-limits]
     container_name: ovos_gui_websocket
-    image: jarbasai/ovos-gui-websocket:latest
+    image: jarbasai/ovos-gui-websocket:$CORE_VERSION
     depends_on:
       - ovos_messagebus
+    healthcheck:
+      test: ["CMD-SHELL", "curl --header 'Connection: Upgrade' --header 'Upgrade: Websocket' http://ovos_messagebus:18181/core || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   ovos_phal:
     <<: [*audio, *resource-limits]
     container_name: ovos_phal
-    image: jarbasai/ovos-phal:latest
+    image: jarbasai/ovos-phal:$CORE_VERSION
     # Only use privileged if absolutely necessary for hardware access
     # TODO - adjust depending on installed PHAL plugins
     #privileged: true
@@ -108,39 +114,54 @@ services:
     <<: [*audio, *resource-limits]
     container_name: ovos_listener
     # pick one
-    image: jarbasai/ovos-dinkum-listener:latest
-    #image: jarbasai/ovos-simple-listener:latest
-    #image: jarbasai/ovos-classic-listener:latest
+    image: jarbasai/ovos-dinkum-listener:$CORE_VERSION
+    #image: jarbasai/ovos-simple-listener:$CORE_VERSION
+    #image: jarbasai/ovos-classic-listener:$CORE_VERSION
     depends_on:
       - ovos_messagebus
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpu: 1
+        reservations:
+          memory: 128M
 
   ovos_audio:
     <<: [*audio, *resource-limits]
     container_name: ovos_audio
-    image: jarbasai/ovos-audio:latest
+    image: jarbasai/ovos-audio:$CORE_VERSION
     depends_on:
       - ovos_messagebus
 
   ovos_core:
     <<: [*audio, *resource-limits]
     container_name: ovos_core
-    image: jarbasai/ovos-core:latest
-    volumes:
-      # ovos
-      - ${BASE_DIR}/config/mycroft:/home/ovos/.config/mycroft
-      - ${BASE_DIR}/data/mycroft:/home/ovos/.local/share/mycroft
-      - ${BASE_DIR}/cache/ovos_gui:/home/ovos/.cache/ovos_gui
-      - ${BASE_DIR}/cache/mycroft:/home/ovos/.cache/mycroft
-      - ${BASE_DIR}/state/mycroft:/home/ovos/.local/state/mycroft
-      - ${BASE_DIR}/tmp:/tmp/mycroft
-      # audio
-      - ~/.config/pulse/cookie:/home/ovos/.config/pulse/cookie:ro
-      - ${XDG_RUNTIME_DIR}/pipewire-0:${XDG_RUNTIME_DIR}/pipewire-0:ro
-      - ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:ro
-      # nltk
-      - ${BASE_DIR}/nltk_data:/home/ovos/nltk_data
+    image: jarbasai/ovos-core:$CORE_VERSION
     depends_on:
       - ovos_messagebus
+
+# ovos_stt_whisper:
+#   <<: [*audio, *resource-limits]
+#   container_name: ovos_stt_whisper
+#   image: jarbasai/ovos-stt-server-whisper:$STT_VERSION
+#   depends_on:
+#     - ovos_messagebus
+#   deploy: {}
+
+# ovos_tts_piper:
+#   <<: [*audio, *resource-limits]
+#   container_name: ovos_tts_piper
+#   image: jarbasai/ovos-tts-server-piper:$TTS_VERSION
+#   depends_on:
+#     - ovos_messagebus
+
+# ovos_tts_phoonnx:
+#   <<: [*audio, *resource-limits]
+#   container_name: ovos_tts_phoonnx
+#   image: jarbasai/ovos-tts-server-phoonnx:$TTS_VERSION
+#   depends_on:
+#     - ovos_messagebus
 
 networks:
   ovos-net:

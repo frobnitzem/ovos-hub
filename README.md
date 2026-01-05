@@ -94,15 +94,64 @@ The relevant lines from docker-compose.yml are:
       ovos-net:
         external: true
 
+## Additional Configuration
+
+Adding the following section to mycroft.conf can edit the intents:
+
+```
+{
+  "intents": {
+    "pipeline": [
+      "ovos-stop-pipeline-plugin-high",
+      "ovos-converse-pipeline-plugin",
+      "ovos-ocp-pipeline-plugin-high",
+      "ovos-padatious-pipeline-plugin-high",
+      "ovos-adapt-pipeline-plugin-high",
+      "ovos-m2v-pipeline-high",
+
+      "ovos-persona-pipeline-plugin-high",
+
+      "ovos-ocp-pipeline-plugin-medium",
+      "ovos-fallback-pipeline-plugin-high",
+      "ovos-stop-pipeline-plugin-medium",
+      "ovos-adapt-pipeline-plugin-medium",
+      "ovos-fallback-pipeline-plugin-medium",
+      "ovos-fallback-pipeline-plugin-low"
+    ]
+  }
+}
+```
+
 
 ## Development instructions
 
-- Modify config file ~> containers automatically pick up this change
+- Modify config file -> containers automatically pick up this change
 
-- Modify component packages ~> rebuild corresponding image ~> restart containers
+- Modify component packages -> rebuild corresponding image -> restart containers
 
-      podman-compose restart [-h] [-t TIMEOUT] [services ...]
+      # example for updating stt
+      vi stt/whisper/Dockerfile
+      vi stt/Makefile # bump version
+      make stt
+      vi .env # bump STT_VERSION
+      podman-compose restart ovos_stt_whisper
 
-- Create integration tests ~> run with ???
+- Create integration tests -> run with ???
 
 
+## Notes
+
+The current mycroft.conf file has things working.
+However, the speech to text will often not capture good enough audio
+to transcribe anything, resulting in:
+```
+[ovos_listener]      | 2026-01-04 21:15:47.831 - voice - ovos_dinkum_listener.voice_loop.voice_loop:_after_cmd:851 - INFO - Raw transcription: [(' Thank you.', 1.0)]
+[ovos_core]          | 2026-01-04 21:15:47.841 - skills - ovos_core.intent_services.service:handle_utterance:450 - INFO - Parsing utterance: ['Thank you']
+[ovos_core]          | 2026-01-04 21:16:09.376 - skills - ovos_core.intent_services.service:handle_utterance:471 - INFO - ovos-fallback-pipeline-plugin-low match (en-US): IntentHandlerMatch(match_type='ovos.skills.fallback.ovos-skill-fallback-unknown.openvoiceos.request', match_data={'skill_id': 'ovos-skill-fallback-unknown.openvoiceos', 'utterances': ['Thank you'], 'lang': 'en-US'}, skill_id=None, utterance='Thank you', updated_session=<ovos_bus_client.session.Session object at 0x75bc8443de10>)
+[ovos_audio]         | 2026-01-04 21:16:09.398 - audio - ovos_audio.service:execute_tts:412 - INFO - Speak: Sorry, I don't understand.
+[ovos_audio]         | 2026-01-04 21:02:13.004 - audio - ovos_tts_plugin_server:_fetch_audio_data:93 - ERROR - Failed to get audio from https://pipertts.ziggyai.online/v2/synthesize: HTTPSConnectionPool(host='pipertts.ziggyai.online', port=443): Max retries exceeded with url: /v2/synthesize?lang=en-US&utterance=I+don%27t+understand. (Caused by ConnectTimeoutError(<HTTPSConnection(host='pipertts.ziggyai.online', port=443) at 0x7aaf3f519090>, 'Connection to pipertts.ziggyai.online timed out. (connect timeout=5)'))
+```
+
+So, without any "tts" or "stt" setup, the `ovos_core` defaults work,
+but only just so.  Ideally, we'd switch to custom tts/stt methods
+as in the mycroft-custom.conf.

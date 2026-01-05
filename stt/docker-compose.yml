@@ -44,41 +44,25 @@ x-stt-base: &stt-base
 
 
 services:
-
-  ovos_stt_mynorthai_rocm:
+  ovos_stt_whisper:
     <<: *stt-base
-    build:
-      context: ./mynorthai
-      dockerfile: Dockerfile.rocm
-    container_name: ovos_stt_mynorthai_rocm
-    hostname: ovos_stt_mynorthai
-    image: jarbasai/ovos-stt-server-mynorthai-rocm:latest
-    ports:
-      - "9081:8080"
-    # TODO - volume for downloaded models
-
-  ovos_stt_hitz_rocm:
-    <<: *stt-base
-    build:
-      context: ./hitz
-      dockerfile: Dockerfile.rocm
-    container_name: ovos_stt_hitz_rocm
-    hostname: ovos_stt_hitz
-    image: jarbasai/ovos-stt-server-hitz-rocm:latest
-    ports:
-      - "9083:8080"
-    # TODO - volume for downloaded models
-
-  ovos_stt_whisper_rocm:
-    <<: *stt-base
-    build:
-      context: ./whisper
-      dockerfile: Dockerfile.rocm
-    container_name: ovos_stt_whisper_rocm
     hostname: ovos_stt_whisper
-    image: jarbasai/ovos-stt-server-whisper-rocm:latest
-    ports:
-      - "9080:8080"
+    image: jarbasai/ovos-stt-server-whisper:0.1.0
+    #ports:
+    #  - "80:8080"
+    # TODO - volume for downloaded models
+
+other:
+  ovos_stt_mynorthai:
+    <<: *stt-base
+    hostname: ovos_stt_mynorthai
+    image: jarbasai/ovos-stt-server-mynorthai:latest
+    # TODO - volume for downloaded models
+
+  ovos_stt_hitz:
+    <<: *stt-base
+    hostname: ovos_stt_hitz
+    image: jarbasai/ovos-stt-server-hitz:latest
     # TODO - volume for downloaded models
 
 networks:
